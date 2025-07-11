@@ -1,4 +1,4 @@
-**Shippopotamus** (or **🚢🦛Shippo** for short) — portable prompt & tool scaffolding for agentic coding.
+**Shippopotamus** (or **Shippo** or **🚢🦛** for short) — portable prompt & tool scaffolding for agentic coding.
 
 * **One tiny index** (`00_INDEX.md`) always in context.  
 * **Hierarchical axioms** under `prompts/axioms/` (🧭 core, ⚖️ quality, 🪢 patterns).  

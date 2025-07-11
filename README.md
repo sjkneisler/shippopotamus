@@ -1,4 +1,4 @@
-# 🚢🦛 **Shippopotamus** (or **🚢🦛Shippo** for short)
+# 🚢🦛 **Shippopotamus** (or **Shippo** or **🚢🦛** for short)
 
 **Structured PromptOps:** lean prompt management, minimal tooling, and clear workflows for sustainable agentic coding.
 
