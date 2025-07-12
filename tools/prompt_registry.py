@@ -78,6 +78,10 @@ def get_default_prompt(name: str) -> Optional[Dict]:
         "safe_coding": "prompts/patterns/safe_coding.md",
         "context_economy": "prompts/patterns/context_economy.md",
         "echo_emoji": "prompts/patterns/echo_emoji.md",
+        "debugging_methodology": "prompts/patterns/debugging_methodology.md",
+        "code_review": "prompts/patterns/code_review.md",
+        "documentation": "prompts/patterns/documentation.md",
+        "testing_strategy": "prompts/patterns/testing_strategy.md",
         
         # Meta prompts
         "implementation_guide": "prompts/meta/implementation-plan.md",

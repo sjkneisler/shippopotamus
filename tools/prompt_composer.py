@@ -126,7 +126,11 @@ def list_available(
             "patterns": [
                 {"name": "safe_coding", "description": "Safe coding practices"},
                 {"name": "context_economy", "description": "Context-aware prompt loading"},
-                {"name": "echo_emoji", "description": "Echo-emoji contract pattern"}
+                {"name": "echo_emoji", "description": "Echo-emoji contract pattern"},
+                {"name": "debugging_methodology", "description": "Systematic debugging approach"},
+                {"name": "code_review", "description": "Comprehensive code review checklist"},
+                {"name": "documentation", "description": "Documentation best practices"},
+                {"name": "testing_strategy", "description": "Test-driven development guide"}
             ],
             "meta": [
                 {"name": "implementation_guide", "description": "Implementation planning"},

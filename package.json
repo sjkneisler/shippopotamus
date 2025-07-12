@@ -1,0 +1,55 @@
+{
+  "name": "shippopotamus",
+  "version": "0.1.0",
+  "description": "Professional prompt management for AI applications - MCP tools for loading, saving, and composing prompts",
+  "keywords": ["mcp", "prompt", "ai", "llm", "prompt-engineering", "mcp-server"],
+  "author": "Shippopotamus Contributors",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/shippopotamus/shippopotamus.git"
+  },
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "shippopotamus": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "prompts",
+    "tools",
+    "README.npm.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/index.ts",
+    "test": "python -m pytest tests/",
+    "lint": "ruff check tools/",
+    "prepare": "npm run build"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^0.5.0",
+    "execa": "^8.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "mcp": {
+    "type": "server",
+    "runtime": "node",
+    "tools": [
+      "get_prompt",
+      "save_prompt",
+      "load_prompts",
+      "compose_prompts",
+      "list_available",
+      "estimate_context"
+    ]
+  }
+}

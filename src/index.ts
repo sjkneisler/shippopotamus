@@ -1,0 +1,170 @@
+#!/usr/bin/env node
+import { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import {
+  CallToolRequestSchema,
+  ListToolsRequestSchema,
+  Tool,
+} from '@modelcontextprotocol/sdk/types.js';
+import { execa } from 'execa';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const PYTHON_SCRIPT = path.join(__dirname, '..', 'tools', 'mcp_bridge.py');
+
+// Tool definitions matching our Python tools
+const TOOLS: Tool[] = [
+  {
+    name: 'get_prompt',
+    description: 'Load a single prompt by name from the registry',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        name: { type: 'string', description: 'Prompt name' }
+      },
+      required: ['name']
+    }
+  },
+  {
+    name: 'save_prompt',
+    description: 'Save a custom prompt to the registry',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        name: { type: 'string', description: 'Unique name for the prompt' },
+        content: { type: 'string', description: 'Prompt content' },
+        file_path: { type: 'string', description: 'Path to file containing prompt' },
+        tags: { type: 'array', items: { type: 'string' }, description: 'Tags for categorization' },
+        parent_prompts: { type: 'array', items: { type: 'string' }, description: 'Parent prompt names' }
+      },
+      required: ['name']
+    }
+  },
+  {
+    name: 'load_prompts',
+    description: 'Load multiple prompts at once from various sources',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        prompt_refs: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'List of prompt references (name, custom:name, file:path, shippopotamus:name)'
+        }
+      },
+      required: ['prompt_refs']
+    }
+  },
+  {
+    name: 'compose_prompts',
+    description: 'Intelligently compose multiple prompts into a single prompt',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        prompt_refs: { type: 'array', items: { type: 'string' }, description: 'Prompt references to compose' },
+        deduplicate: { type: 'boolean', description: 'Remove duplicate sections', default: true },
+        max_tokens: { type: 'number', description: 'Maximum token budget' },
+        separator: { type: 'string', description: 'Separator between prompts', default: '\n\n---\n\n' }
+      },
+      required: ['prompt_refs']
+    }
+  },
+  {
+    name: 'list_available',
+    description: 'List all available prompts in the registry',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        include_defaults: { type: 'boolean', description: 'Include default prompts', default: true },
+        include_custom: { type: 'boolean', description: 'Include custom prompts', default: true },
+        tags: { type: 'array', items: { type: 'string' }, description: 'Filter by tags' }
+      }
+    }
+  },
+  {
+    name: 'estimate_context',
+    description: 'Estimate token count for content or prompt references',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        content: { type: 'string', description: 'Direct content to estimate' },
+        prompt_refs: { type: 'array', items: { type: 'string' }, description: 'Prompt references to estimate' }
+      }
+    }
+  }
+];
+
+class ShippopotamusServer {
+  private server: Server;
+
+  constructor() {
+    this.server = new Server(
+      {
+        name: 'shippopotamus',
+        vendor: 'shippopotamus',
+        version: '0.1.0',
+        description: 'Professional prompt management for AI applications'
+      },
+      {
+        capabilities: {
+          tools: {}
+        }
+      }
+    );
+
+    this.setupHandlers();
+  }
+
+  private setupHandlers() {
+    // List available tools
+    this.server.setRequestHandler(ListToolsRequestSchema, async () => ({
+      tools: TOOLS
+    }));
+
+    // Handle tool calls
+    this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
+      const { name, arguments: args } = request.params;
+
+      try {
+        // Call Python bridge script
+        const { stdout } = await execa('python', [
+          PYTHON_SCRIPT,
+          name,
+          JSON.stringify(args || {})
+        ]);
+
+        const result = JSON.parse(stdout);
+        
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(result, null, 2)
+            }
+          ]
+        };
+      } catch (error: any) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Error: ${error.message}`
+            }
+          ],
+          isError: true
+        };
+      }
+    });
+  }
+
+  async run() {
+    const transport = new StdioServerTransport();
+    await this.server.connect(transport);
+    console.error('Shippopotamus MCP server running...');
+  }
+}
+
+// Start the server
+const server = new ShippopotamusServer();
+server.run().catch(console.error);
