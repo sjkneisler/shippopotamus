@@ -2,290 +2,360 @@
 id: prompt_registry
 tag: prompt_ops
 
-Registry for tracking loaded prompts and computing context costs.
-Works in tandem with prompt_loader to provide context economy insights.
+Core registry system for Shippopotamus PromptOps platform.
+Manages both default prompts (from our curated library) and custom prompts (user-saved).
 """
 
-from typing import Dict, List
+import json
+import sqlite3
+from pathlib import Path
+from typing import Dict, List, Optional
 from datetime import datetime
+import hashlib
 
 from fastmcp import FastMCP
 
 mcp = FastMCP()
 
-# In-memory registry for this session
-_registry: Dict[str, List[Dict]] = {
-    "sessions": [],
-    "current_session": None
-}
+# Database path in project's tmp directory
+DB_PATH = Path("tmp/prompt_registry.db")
 
-def _get_or_create_session() -> Dict:
-    """Get current session or create a new one."""
-    if not _registry["current_session"]:
-        session = {
-            "id": datetime.now().isoformat(),
-            "started_at": datetime.now().isoformat(),
-            "prompts_loaded": [],
-            "total_tokens": 0,
-            "loads_count": 0
+# Token estimation ratio (roughly 4 chars = 1 token)
+TOKEN_RATIO = 0.25
+
+def init_db():
+    """Initialize the prompt registry database."""
+    DB_PATH.parent.mkdir(exist_ok=True)
+    
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    
+    # Table for custom prompts metadata
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS custom_prompts (
+            id TEXT PRIMARY KEY,
+            name TEXT UNIQUE NOT NULL,
+            content TEXT,
+            file_path TEXT,
+            tags TEXT DEFAULT '[]',
+            parent_prompts TEXT DEFAULT '[]',
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            usage_count INTEGER DEFAULT 0,
+            tokens INTEGER,
+            hash TEXT
+        )
+    """)
+    
+    # Table for tracking prompt usage
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS usage_log (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            prompt_name TEXT NOT NULL,
+            prompt_type TEXT NOT NULL,  -- 'default', 'custom', 'file'
+            used_at TEXT NOT NULL,
+            tokens INTEGER
+        )
+    """)
+    
+    conn.commit()
+    conn.close()
+
+def estimate_tokens(text: str) -> int:
+    """Estimate token count from text."""
+    return int(len(text) * TOKEN_RATIO)
+
+def get_default_prompt(name: str) -> Optional[Dict]:
+    """Load a default prompt from our curated library."""
+    # Map of default prompt names to their file paths
+    default_prompts = {
+        # Core methodologies
+        "ask_plan_act": "prompts/axioms/CORE.md",
+        "quality_axioms": "prompts/axioms/QUALITY.md", 
+        "patterns": "prompts/axioms/PATTERNS.md",
+        
+        # Specific patterns
+        "safe_coding": "prompts/patterns/safe_coding.md",
+        "context_economy": "prompts/patterns/context_economy.md",
+        "echo_emoji": "prompts/patterns/echo_emoji.md",
+        
+        # Meta prompts
+        "implementation_guide": "prompts/meta/implementation-plan.md",
+        "design_rationale": "prompts/meta/design-rationale.md"
+    }
+    
+    if name not in default_prompts:
+        return None
+    
+    file_path = Path(default_prompts[name])
+    if not file_path.exists():
+        return None
+    
+    content = file_path.read_text()
+    return {
+        "name": name,
+        "content": content,
+        "type": "default",
+        "path": str(file_path),
+        "tokens": estimate_tokens(content)
+    }
+
+@mcp.tool()
+def get_prompt(name: str) -> dict:
+    """
+    Load a single prompt by name from the registry.
+    
+    Args:
+        name: Prompt name (can be default prompt or custom saved prompt)
+    
+    Returns:
+        dict: Prompt data including content, tokens, and metadata
+    """
+    init_db()
+    
+    # First check default prompts
+    default = get_default_prompt(name)
+    if default:
+        # Log usage
+        log_usage(name, "default", default["tokens"])
+        return default
+    
+    # Then check custom prompts
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    
+    cursor.execute("""
+        SELECT name, content, file_path, tags, parent_prompts, 
+               created_at, updated_at, tokens, hash
+        FROM custom_prompts
+        WHERE name = ?
+    """, (name,))
+    
+    row = cursor.fetchone()
+    conn.close()
+    
+    if not row:
+        return {"error": f"Prompt '{name}' not found in registry"}
+    
+    name, content, file_path, tags_json, parents_json, created, updated, tokens, hash_val = row
+    
+    # If it's a file reference, load from file
+    if file_path and not content:
+        try:
+            content = Path(file_path).read_text()
+            tokens = estimate_tokens(content)
+        except Exception as e:
+            return {"error": f"Failed to load file '{file_path}': {str(e)}"}
+    
+    # Log usage
+    log_usage(name, "custom", tokens)
+    
+    return {
+        "name": name,
+        "content": content,
+        "type": "custom",
+        "file_path": file_path,
+        "tags": json.loads(tags_json),
+        "parent_prompts": json.loads(parents_json),
+        "created_at": created,
+        "updated_at": updated,
+        "tokens": tokens
+    }
+
+@mcp.tool()
+def save_prompt(
+    name: str,
+    content: Optional[str] = None,
+    file_path: Optional[str] = None,
+    tags: Optional[List[str]] = None,
+    parent_prompts: Optional[List[str]] = None
+) -> dict:
+    """
+    Save a custom prompt to the registry.
+    
+    Args:
+        name: Unique name for the prompt
+        content: Prompt content (mutually exclusive with file_path)
+        file_path: Path to file containing prompt (mutually exclusive with content)
+        tags: List of tags for categorization
+        parent_prompts: List of parent prompt names this was derived from
+    
+    Returns:
+        dict: Confirmation with prompt metadata
+    """
+    init_db()
+    
+    if not content and not file_path:
+        return {"error": "Must provide either content or file_path"}
+    
+    if content and file_path:
+        return {"error": "Cannot provide both content and file_path"}
+    
+    # Calculate tokens and hash
+    if content:
+        tokens = estimate_tokens(content)
+        hash_val = hashlib.sha256(content.encode()).hexdigest()[:16]
+    else:
+        # For file references, we'll calculate on load
+        tokens = None
+        hash_val = None
+    
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    
+    now = datetime.now().isoformat()
+    
+    try:
+        cursor.execute("""
+            INSERT INTO custom_prompts 
+            (id, name, content, file_path, tags, parent_prompts, 
+             created_at, updated_at, tokens, hash)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            name.lower().replace(" ", "_"),
+            name,
+            content,
+            file_path,
+            json.dumps(tags or []),
+            json.dumps(parent_prompts or []),
+            now,
+            now,
+            tokens,
+            hash_val
+        ))
+        
+        conn.commit()
+        conn.close()
+        
+        return {
+            "saved": True,
+            "name": name,
+            "type": "content" if content else "file_reference",
+            "tokens": tokens,
+            "tags": tags or [],
+            "parent_prompts": parent_prompts or []
         }
-        _registry["sessions"].append(session)
-        _registry["current_session"] = session
-    return _registry["current_session"]
+        
+    except sqlite3.IntegrityError:
+        conn.close()
+        return {"error": f"Prompt with name '{name}' already exists"}
 
 @mcp.tool()
-def register_prompt_load(
-    prompt_id: str,
-    emoji: str,
-    tokens: int,
-    source_path: str,
-    echo_confirmed: bool = False
-) -> dict:
+def load_prompts(prompt_refs: List[str]) -> dict:
     """
-    Register that a prompt was loaded (called by agents after loading).
+    Load multiple prompts at once from various sources.
     
     Args:
-        prompt_id: The ID of the loaded prompt
-        emoji: The emoji that should be echoed
-        tokens: Estimated token count
-        source_path: Path to the prompt file
-        echo_confirmed: Whether the echo-emoji contract was fulfilled
+        prompt_refs: List of prompt references in format:
+            - "prompt_name" - Load from registry (default or custom)
+            - "file:path/to/file.md" - Load from file path
+            - "shippopotamus:name" - Explicitly load default prompt
+            - "custom:name" - Explicitly load custom prompt
     
     Returns:
-        dict: Registration confirmation with session stats
+        dict: Loaded prompts with metadata and combined token count
     """
-    session = _get_or_create_session()
+    init_db()
     
-    load_record = {
-        "prompt_id": prompt_id,
-        "emoji": emoji,
-        "tokens": tokens,
-        "source_path": source_path,
-        "loaded_at": datetime.now().isoformat(),
-        "echo_confirmed": echo_confirmed,
-        "load_number": session["loads_count"] + 1
-    }
-    
-    session["prompts_loaded"].append(load_record)
-    session["total_tokens"] += tokens
-    session["loads_count"] += 1
-    
-    return {
-        "registered": True,
-        "load_number": load_record["load_number"],
-        "session_total_tokens": session["total_tokens"],
-        "session_prompts_count": len(set(p["prompt_id"] for p in session["prompts_loaded"])),
-        "echo_contract": "fulfilled" if echo_confirmed else "pending"
-    }
-
-@mcp.tool()
-def get_session_report() -> dict:
-    """
-    Get a detailed report of the current session's prompt usage.
-    
-    Returns:
-        dict: Comprehensive session statistics and insights
-    """
-    session = _get_or_create_session()
-    
-    # Calculate unique prompts
-    unique_prompts = {}
-    for load in session["prompts_loaded"]:
-        pid = load["prompt_id"]
-        if pid not in unique_prompts:
-            unique_prompts[pid] = {
-                "emoji": load["emoji"],
-                "load_count": 0,
-                "total_tokens": 0,
-                "echo_confirmed_count": 0
-            }
-        unique_prompts[pid]["load_count"] += 1
-        unique_prompts[pid]["total_tokens"] += load["tokens"]
-        if load["echo_confirmed"]:
-            unique_prompts[pid]["echo_confirmed_count"] += 1
-    
-    # Find most loaded prompts
-    most_loaded = sorted(
-        unique_prompts.items(),
-        key=lambda x: x[1]["load_count"],
-        reverse=True
-    )[:5]
-    
-    # Calculate echo contract compliance
-    total_loads = len(session["prompts_loaded"])
-    echo_confirmed = sum(1 for load in session["prompts_loaded"] if load["echo_confirmed"])
-    compliance_rate = (echo_confirmed / total_loads * 100) if total_loads > 0 else 0
-    
-    return {
-        "session_id": session["id"],
-        "started_at": session["started_at"],
-        "duration_minutes": _calculate_duration_minutes(session["started_at"]),
-        "total_loads": total_loads,
-        "unique_prompts": len(unique_prompts),
-        "total_tokens": session["total_tokens"],
-        "average_tokens_per_load": session["total_tokens"] // total_loads if total_loads > 0 else 0,
-        "echo_contract_compliance": f"{compliance_rate:.1f}%",
-        "most_loaded_prompts": [
-            {
-                "id": pid,
-                "emoji": data["emoji"],
-                "loads": data["load_count"],
-                "tokens": data["total_tokens"]
-            }
-            for pid, data in most_loaded
-        ],
-        "prompts_by_category": _categorize_prompts(unique_prompts)
-    }
-
-def _calculate_duration_minutes(start_time: str) -> float:
-    """Calculate duration in minutes from start time."""
-    start = datetime.fromisoformat(start_time)
-    duration = datetime.now() - start
-    return round(duration.total_seconds() / 60, 1)
-
-def _categorize_prompts(unique_prompts: Dict) -> Dict:
-    """Categorize prompts based on their IDs."""
-    categories = {
-        "axioms": [],
-        "meta": [],
-        "other": []
-    }
-    
-    for prompt_id in unique_prompts:
-        if prompt_id in ["CORE", "QUALITY", "PATTERNS"]:
-            categories["axioms"].append(prompt_id)
-        elif prompt_id in ["backlog", "design-rationale", "implementation-plan"]:
-            categories["meta"].append(prompt_id)
-        else:
-            categories["other"].append(prompt_id)
-    
-    return {k: v for k, v in categories.items() if v}
-
-@mcp.tool()
-def estimate_context_usage(
-    prompt_ids: List[str]
-) -> dict:
-    """
-    Estimate the context usage for loading a set of prompts.
-    
-    Args:
-        prompt_ids: List of prompt IDs to estimate
-    
-    Returns:
-        dict: Token estimates and recommendations
-    """
-    # Import prompt_loader to get actual file info
-    import prompt_loader
-    
-    estimates = []
+    loaded = []
+    errors = []
     total_tokens = 0
-    missing_prompts = []
     
-    for prompt_id in prompt_ids:
-        # Try to get prompt info without loading it
-        all_prompts = prompt_loader.list_prompts()
-        prompt_info = next((p for p in all_prompts["prompts"] if p["id"] == prompt_id), None)
-        
-        if prompt_info:
-            estimates.append({
-                "id": prompt_id,
-                "emoji": prompt_info["emoji"],
-                "tokens": prompt_info["tokens"],
-                "category": prompt_info["category"]
-            })
-            total_tokens += prompt_info["tokens"]
+    for ref in prompt_refs:
+        if ref.startswith("file:"):
+            # Load from file
+            file_path = ref[5:]  # Remove "file:" prefix
+            try:
+                content = Path(file_path).read_text()
+                tokens = estimate_tokens(content)
+                loaded.append({
+                    "ref": ref,
+                    "content": content,
+                    "type": "file",
+                    "path": file_path,
+                    "tokens": tokens
+                })
+                total_tokens += tokens
+                log_usage(file_path, "file", tokens)
+            except Exception as e:
+                errors.append({
+                    "ref": ref,
+                    "error": str(e)
+                })
+                
+        elif ref.startswith("shippopotamus:"):
+            # Explicitly load default prompt
+            name = ref[14:]  # Remove prefix
+            prompt = get_default_prompt(name)
+            if prompt:
+                loaded.append({
+                    "ref": ref,
+                    **prompt
+                })
+                total_tokens += prompt["tokens"]
+                log_usage(name, "default", prompt["tokens"])
+            else:
+                errors.append({
+                    "ref": ref,
+                    "error": f"Default prompt '{name}' not found"
+                })
+                
+        elif ref.startswith("custom:"):
+            # Explicitly load custom prompt
+            name = ref[7:]  # Remove prefix
+            result = get_prompt(name)
+            if "error" not in result:
+                loaded.append({
+                    "ref": ref,
+                    **result
+                })
+                total_tokens += result["tokens"]
+            else:
+                errors.append({
+                    "ref": ref,
+                    "error": result["error"]
+                })
+                
         else:
-            missing_prompts.append(prompt_id)
-    
-    # Recommendations based on token count
-    recommendations = []
-    if total_tokens > 10000:
-        recommendations.append("Consider loading prompts incrementally rather than all at once")
-    if total_tokens > 20000:
-        recommendations.append("This will use significant context - ensure it's necessary")
-    
-    # Check for redundancy
-    if "CORE" in prompt_ids and "PATTERNS" in prompt_ids:
-        recommendations.append("CORE and PATTERNS have some overlap - consider loading only one")
-    
-    return {
-        "requested_prompts": len(prompt_ids),
-        "found_prompts": len(estimates),
-        "missing_prompts": missing_prompts,
-        "total_estimated_tokens": total_tokens,
-        "estimates": estimates,
-        "recommendations": recommendations,
-        "context_percentage": f"{(total_tokens / 200000 * 100):.1f}%"  # Assuming ~200k context
-    }
-
-@mcp.tool()
-def new_session() -> dict:
-    """
-    Start a new prompt loading session.
-    
-    Returns:
-        dict: New session information
-    """
-    # Save current session if exists
-    if _registry["current_session"]:
-        _registry["current_session"]["ended_at"] = datetime.now().isoformat()
-    
-    # Create new session
-    session = {
-        "id": datetime.now().isoformat(),
-        "started_at": datetime.now().isoformat(),
-        "prompts_loaded": [],
-        "total_tokens": 0,
-        "loads_count": 0
-    }
-    _registry["sessions"].append(session)
-    _registry["current_session"] = session
+            # Try registry (default first, then custom)
+            result = get_prompt(ref)
+            if "error" not in result:
+                loaded.append({
+                    "ref": ref,
+                    **result
+                })
+                total_tokens += result["tokens"]
+            else:
+                errors.append({
+                    "ref": ref,
+                    "error": result["error"]
+                })
     
     return {
-        "new_session_id": session["id"],
-        "previous_sessions": len(_registry["sessions"]) - 1,
-        "status": "Session started"
+        "loaded": loaded,
+        "errors": errors,
+        "total_prompts": len(loaded),
+        "total_tokens": total_tokens,
+        "success_rate": f"{len(loaded)}/{len(prompt_refs)}"
     }
 
-@mcp.tool()
-def get_all_sessions_summary() -> dict:
-    """
-    Get a summary of all prompt loading sessions.
+def log_usage(name: str, prompt_type: str, tokens: int):
+    """Log prompt usage for analytics."""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
     
-    Returns:
-        dict: Summary statistics across all sessions
-    """
-    if not _registry["sessions"]:
-        return {"message": "No sessions recorded yet"}
+    cursor.execute("""
+        INSERT INTO usage_log (prompt_name, prompt_type, used_at, tokens)
+        VALUES (?, ?, ?, ?)
+    """, (name, prompt_type, datetime.now().isoformat(), tokens))
     
-    total_tokens_all = sum(s["total_tokens"] for s in _registry["sessions"])
-    total_loads_all = sum(s["loads_count"] for s in _registry["sessions"])
+    # Update usage count for custom prompts
+    if prompt_type == "custom":
+        cursor.execute("""
+            UPDATE custom_prompts 
+            SET usage_count = usage_count + 1
+            WHERE name = ?
+        """, (name,))
     
-    sessions_summary = []
-    for session in _registry["sessions"]:
-        duration = _calculate_duration_minutes(session["started_at"])
-        is_current = session == _registry["current_session"]
-        
-        sessions_summary.append({
-            "session_id": session["id"],
-            "duration_minutes": duration,
-            "loads": session["loads_count"],
-            "tokens": session["total_tokens"],
-            "is_current": is_current
-        })
-    
-    return {
-        "total_sessions": len(_registry["sessions"]),
-        "total_tokens_all_time": total_tokens_all,
-        "total_loads_all_time": total_loads_all,
-        "average_tokens_per_session": total_tokens_all // len(_registry["sessions"]),
-        "sessions": sessions_summary
-    }
-
-def _reset_registry():
-    """Reset the registry for testing purposes."""
-    global _registry
-    _registry = {
-        "sessions": [],
-        "current_session": None
-    }
+    conn.commit()
+    conn.close()
