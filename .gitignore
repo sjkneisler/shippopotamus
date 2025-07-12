@@ -1,1 +1,26 @@
 .envrc
+
+# Temporary files and databases
+tmp/
+*.db
+
+# Memory bank archives
+memory-bank/archive/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv
+.pytest_cache/
+
+# IDE
+.vscode/
+.idea/
+
+
+.mcp.json
