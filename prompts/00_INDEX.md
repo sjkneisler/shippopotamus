@@ -5,7 +5,7 @@ Single, always‑loaded guide that tells an agent **where to look next** and how
 ---
 
 ### How to discover more guidance  
-*Run a recursive file search (e.g. `rg "id:" --files`) and load any file whose header matches the emoji(s) you need.*
+*Run a recursive file search (e.g. `rg "id:" --files`) and load any file whose header matches the emoji(s) you need.*
 
 ---
 
@@ -15,12 +15,14 @@ Example reply prefix: `🗺️🧭⚖️`.
 
 ---
 
-### Day‑0 tools  
-| Tag | Function | Path |
-|-----|----------|------|
-| `<TOOL_PRUNE>` | Prune oldest lines in `memory-bank/progress.md`. | `tools/prune_memory.py` |
-| `<TOOL_QUEUE>` | FIFO + sticky progress log. | `tools/progress_queue.py` |
-| `<TOOL_DEDUP>` | Block duplicate tool calls & unsafe writes. | `tools/tool_dedup_guard.py` |
+### Prompt Management Tools
+| Function | Description |
+|----------|-------------|
+| `get_prompt(name)` | Load from registry or library |
+| `save_prompt(...)` | Save custom prompts |
+| `load_prompts([...])` | Batch load multiple sources |
+| `compose_prompts(...)` | Combine with deduplication |
+| `list_available()` | Discover all prompts |
+| `estimate_context(...)` | Plan token usage |
 
-(*File size target ≤ 2 KB—keep brief!*)
-
+(*File size target ≤ 2 KB—keep brief!*)

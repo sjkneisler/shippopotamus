@@ -1,55 +1,162 @@
 # 🚢🦛 **Shippopotamus** (or **Shippo** or **🚢🦛** for short)
 
-**Structured PromptOps:** lean prompt management, minimal tooling, and clear workflows for sustainable agentic coding.
+**Professional prompt management for AI applications** - Load, save, compose, and optimize prompts with intelligent MCP tools.
 
 ---
 
-## Why Shippo?
+## What is Shippopotamus?
 
-* **PromptOps mindset** – treat prompts, docs, and tools as first-class operational assets.  
-* **Tiny always-loaded index** – one file (`prompts/00_INDEX.md`) keeps context costs low.  
-* **Opinionated axioms** – shared, project-agnostic principles for consistency.  
-* **Day-0 tool set** – three lightweight MCP tools (prune, progress queue, dedup + safe-write) that solve real pain without over-engineering.
+Shippopotamus is a prompt management platform that helps teams building AI applications:
 
----
-
-## Quick start
-
-1. `git clone <this-repo>`  
-2. Copy **`prompts/`** and **`tools/`** into any codebase you want the agent to work on.  
-3. Point your coding LLM at `prompts/00_INDEX.md`.  
-4. Watch it echo the emojis, call only needed tools, and ship clean code.
+* **🎯 Curated Prompt Library** – Battle-tested methodologies like Ask→Plan→Act
+* **💾 Custom Prompt Registry** – Save and version your team's prompts  
+* **🔗 File References** – Link to existing docs without duplication
+* **🧩 Intelligent Composition** – Combine prompts with deduplication
+* **📊 Context Budgeting** – Estimate tokens before loading
 
 ---
 
-## Directory guide
+## Quick Start
 
-| Path | Purpose |
+### For AI Application Developers
+
+1. Install the MCP server in your project:
+```json
+{
+  "mcpServers": {
+    "shippopotamus": {
+      "command": "npx",
+      "args": ["shippopotamus"]
+    }
+  }
+}
+```
+
+2. Use the tools in your AI workflow:
+```python
+# Load a proven methodology
+prompt = get_prompt("ask_plan_act")
+
+# Save your company standards
+save_prompt("company_style", content="...", tags=["standards"])
+
+# Compose multiple prompts
+composed = compose_prompts(["ask_plan_act", "company_style"])
+```
+
+### For Contributors
+
+1. `git clone https://github.com/yourusername/shippopotamus`
+2. `pip install -r requirements.txt`
+3. `python test_comprehensive.py`
+
+---
+
+## Core Tools
+
+| Tool | Purpose |
 |------|---------|
-| `prompts/00_INDEX.md` | Always-loaded index, tool list, emoji-echo rule. |
-| `prompts/axioms/` | Core, Quality, and Pattern docs (global principles). |
-| `prompts/meta/` | Design rationale, backlog, implementation plan. |
-| `tools/` | Day-0 MCP wrappers (`prune_memory`, `progress_queue`, `tool_dedup_guard`). |
+| `get_prompt(name)` | Load prompts from registry or library |
+| `save_prompt(...)` | Save custom prompts with metadata |
+| `load_prompts([...])` | Batch load from multiple sources |
+| `compose_prompts(...)` | Intelligently combine prompts |
+| `list_available()` | Discover all available prompts |
+| `estimate_context(...)` | Plan token usage |
 
 ---
 
-## Roadmap highlights
+## Prompt Library
 
-* RAG-on-tools registry for smart tool retrieval  
-* Phase-switch mini-tool (PLAN / IMPLEMENT / QA)  
-* Split-brain executor for low-latency local calls  
-* Weekly CI prune & archive job
+### Methodologies
+- **ask_plan_act** (🧭) - Core Ask→Plan→Act methodology
+- **quality_axioms** (⚖️) - Quality and best practices
+- **patterns** (🪢) - Meta-patterns for prompt design
 
-(See `prompts/meta/backlog.md` for details.)
+### Patterns
+- **safe_coding** (🛡️) - Security practices
+- **context_economy** (💰) - Token optimization  
+- **echo_emoji** (📣) - Visual contracts
+
+---
+
+## Key Features
+
+### 🎯 Dual Registry
+- Curated default prompts from Shippopotamus
+- Your custom prompts saved locally
+- Seamless integration between both
+
+### 🔗 Flexible Loading
+```python
+load_prompts([
+    "ask_plan_act",              # Default prompt
+    "custom:company_style",      # Your saved prompt
+    "file:./docs/api.md"         # Direct file reference
+])
+```
+
+### 🧩 Smart Composition
+- Automatic deduplication of repeated content
+- Token budget enforcement
+- Metadata tracking for composed prompts
+
+### 📊 Context Awareness
+- Estimate tokens before loading
+- Get recommendations for large contexts
+- Track usage across sessions
+
+---
+
+## Examples
+
+See the `examples/` directory for:
+- `consumer_usage.py` - How teams use Shippopotamus
+- `dogfooding.py` - How we use our own tools
+
+---
+
+## Architecture
+
+```
+tools/
+├── prompt_registry.py    # Core registry functionality
+├── prompt_composer.py    # Composition and utilities
+└── __init__.py          # FastMCP registration
+
+prompts/                 # Curated prompt library
+├── axioms/              # Core methodologies
+├── patterns/            # Reusable patterns
+└── meta/                # Documentation
+
+tmp/
+└── prompt_registry.db   # Local storage for custom prompts
+```
 
 ---
 
 ## Contributing
 
-Pull requests and prompt ideas welcome—keep them lean, documented, and in line with Shippo’s axioms. Open an issue if you’re unsure.
+We welcome contributions! Please:
+- Follow the existing code style
+- Add tests for new functionality
+- Update documentation as needed
+- Open an issue before major changes
+
+---
+
+## Roadmap
+
+- **v0.2** - Prompt versioning and history
+- **v0.3** - Team collaboration features
+- **v0.4** - Analytics and insights
+- **v0.5** - LLM platform integrations
 
 ---
 
 ## License
 
-MIT ― see `LICENSE`.
+MIT - See LICENSE file
+
+---
+
+Built with ❤️ for the AI engineering community by the Shippopotamus team

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-🚢🦛 **Shippopotamus** is a PromptOps framework for structured prompt management and lean tooling for agentic coding. This is NOT a traditional programming project - it's a meta-framework for managing LLM interactions.
+🚢🦛 **Shippopotamus** is a prompt management platform that helps AI applications manage, compose, and optimize their prompts. It provides MCP tools that external teams can use to professionalize their prompt engineering workflows.
 
 ## Key Development Principles
 
@@ -37,11 +37,11 @@ pytest tests/test_tools.py
 ```
 
 ### Tool Development
-Day-0 tools use FastMCP for registration. Each tool must:
-1. Include header docstring with `id:` and `tag:`
-2. Be registered in `tools/__init__.py`
-3. Use SQLite databases in `tmp/` directory
-4. Follow the dedup guard pattern before any tool invocation
+Our MCP tools use FastMCP for registration. Each tool provides:
+1. Prompt loading and saving capabilities
+2. Intelligent composition and deduplication
+3. Token estimation and context budgeting
+4. Support for both curated defaults and custom prompts
 
 ## Architecture
 
@@ -51,34 +51,32 @@ Day-0 tools use FastMCP for registration. Each tool must:
   - `axioms/` - Core principles (CORE.md, QUALITY.md, PATTERNS.md)
   - `meta/` - Design docs and backlog
 - `tools/` - MCP tool implementations
-  - `prune_memory.py` - Memory pruning
-  - `progress_queue.py` - FIFO queue with importance levels
-  - `tool_dedup_guard.py` - Prevent duplicate calls
+  - `prompt_registry.py` - Core registry for default and custom prompts
+  - `prompt_composer.py` - Intelligent prompt composition tools
 
 ### Database Files
-- `tmp/progress.db` - Progress queue storage
-- `tmp/dedup.db` - Tool deduplication hashes
-- `memory-bank/progress.md` - Memory bank for pruning
+- `tmp/prompt_registry.db` - SQLite database for custom prompts and usage tracking
 
 ## Critical Rules
 
-1. **Tool Deduplication**: Always call `tool_dedup_guard` before any tool invocation
-2. **Safe Write**: Never use `write_file` without `read_file` in the same turn
-3. **File Size**: Keep `00_INDEX.md` under 2KB
-4. **Temp Files**: All temporary artifacts go under `tmp/`
+1. **Consumer Focus**: All tools must provide value to external users, not just internal use
+2. **Dual Registry**: Support both our curated prompts and user's custom prompts
+3. **File References**: Allow users to reference files in their own repositories
+4. **Context Awareness**: Help users manage token budgets effectively
 
 ## Testing Approach
 
 Use pytest for unit tests focusing on:
-- Basic tool functionality (smoke tests)
-- Database creation and operations
-- Deduplication logic
-- File size constraints
+- Registry functionality (save, load, search)
+- Prompt composition and deduplication
+- File reference resolution
+- Token estimation accuracy
+- Error handling for missing prompts
 
 ## Future Features (Backlog)
 
-- RAG-on-tools registry for smart tool retrieval
-- Phase-switch mini-tool (PLAN/IMPLEMENT/QA)
-- Split-brain executor for low-latency calls
-- Weekly CI prune & archive job
-- Cost telemetry in `tmp/tool_stats.json`
+- Prompt versioning and history
+- Team collaboration features
+- Prompt performance analytics
+- Import/export capabilities
+- Integration with more LLM platforms
