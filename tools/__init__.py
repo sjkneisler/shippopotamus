@@ -1,25 +1,22 @@
 """
-Shippopotamus Day-0 Tools Registration
+Shippopotamus PromptOps Tools
 
-This module registers all Day-0 tools with FastMCP for use in agentic workflows.
+Core tools for prompt management and context economy in agentic coding workflows.
 """
 
 from fastmcp import FastMCP
 
-# Import all tool modules to register their tools
-from . import prune_memory
-from . import progress_queue
-from . import tool_dedup_guard
+# Import the prompt management tools
+from . import prompt_loader
+from . import prompt_registry
 
 # Create a single MCP instance for all tools
 mcp = FastMCP()
 
-# The tools are already registered via @mcp.tool decorators in their modules
-# This file ensures they're all loaded when the tools package is imported
+# The tools are already registered via @mcp.tool() decorators in their modules
 
 __all__ = [
-    "prune_memory",
-    "progress_queue", 
-    "tool_dedup_guard",
+    "prompt_loader",
+    "prompt_registry",
     "mcp"
 ]
