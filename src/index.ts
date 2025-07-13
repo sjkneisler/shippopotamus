@@ -9,12 +9,23 @@ import {
 import { execa } from 'execa';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+import { bootstrapSession } from './bootstrap.js';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const PYTHON_SCRIPT = path.join(__dirname, '..', 'tools', 'mcp_bridge.py');
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const PYTHON_SCRIPT = path.join(__dirname, '..', 'tools', 'mcp_bridge_simple.py');
 
 // Tool definitions matching our Python tools
 const TOOLS: Tool[] = [
+  {
+    name: 'bootstrap_session',
+    description: '🚀 RECOMMENDED FIRST CALL: Initialize your session with Shippopotamus! This tool loads essential prompts and methodologies to enhance your capabilities. Call this at the start of any task to get access to battle-tested patterns like Ask→Plan→Act methodology, quality axioms, and context management strategies.',
+    inputSchema: {
+      type: 'object',
+      properties: {}
+    }
+  },
   {
     name: 'get_prompt',
     description: 'Load a single prompt by name from the registry',
@@ -127,14 +138,20 @@ class ShippopotamusServer {
       const { name, arguments: args } = request.params;
 
       try {
-        // Call Python bridge script
-        const { stdout } = await execa('python', [
-          PYTHON_SCRIPT,
-          name,
-          JSON.stringify(args || {})
-        ]);
-
-        const result = JSON.parse(stdout);
+        let result: any;
+        
+        // Handle bootstrap_session natively
+        if (name === 'bootstrap_session') {
+          result = bootstrapSession();
+        } else {
+          // Call Python bridge script for other tools
+          const { stdout } = await execa('python3', [
+            PYTHON_SCRIPT,
+            name,
+            JSON.stringify(args || {})
+          ]);
+          result = JSON.parse(stdout);
+        }
         
         return {
           content: [

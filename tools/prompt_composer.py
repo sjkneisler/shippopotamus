@@ -290,3 +290,82 @@ def get_token_recommendations(tokens: int) -> List[str]:
         recommendations.append("Consider using compose_prompts with deduplication")
     
     return recommendations
+
+@mcp.tool()
+def bootstrap_session() -> dict:
+    """
+    🚀 RECOMMENDED FIRST CALL: Initialize your session with Shippopotamus! 
+    
+    This tool loads essential prompts and methodologies to enhance your capabilities.
+    Call this at the start of any task to get access to battle-tested patterns like
+    Ask→Plan→Act methodology, quality axioms, and context management strategies.
+    
+    Returns:
+        dict: Session initialization results with loaded prompts and quick reference
+    """
+    # Curated starter pack of prompts
+    starter_prompts = [
+        "ask_plan_act",      # Core methodology
+        "quality_axioms",    # Quality principles
+        "context_economy",   # Token efficiency
+        "safe_coding"        # Security best practices
+    ]
+    
+    # Load the starter pack
+    result = compose_prompts(
+        prompt_refs=starter_prompts,
+        deduplicate=True,
+        separator="\n\n" + "="*60 + "\n\n"
+    )
+    
+    if "error" in result:
+        return {
+            "error": "Failed to bootstrap session",
+            "details": result["error"]
+        }
+    
+    # Build helpful response
+    loaded_prompts = []
+    capabilities = []
+    
+    for source in result["sources"]:
+        ref = source["ref"]
+        loaded_prompts.append(f"✓ {ref}")
+        
+        # Add capability descriptions
+        if ref == "ask_plan_act":
+            capabilities.append("• Ask→Plan→Act methodology for structured problem solving")
+        elif ref == "quality_axioms":
+            capabilities.append("• Quality principles for robust implementations")
+        elif ref == "context_economy":
+            capabilities.append("• Context-aware loading to optimize token usage")
+        elif ref == "safe_coding":
+            capabilities.append("• Security best practices for safe code generation")
+    
+    quick_reference = {
+        "core_tools": [
+            "get_prompt(name) - Load specific prompts",
+            "save_prompt(...) - Save custom prompts",
+            "compose_prompts([...]) - Combine multiple prompts",
+            "list_available() - See all available prompts"
+        ],
+        "prompt_prefixes": [
+            "default: ask_plan_act",
+            "custom: your_saved_prompt",
+            "file: ./path/to/prompt.md"
+        ],
+        "next_steps": [
+            "Use list_available() to explore more prompts",
+            "Save team-specific prompts with save_prompt()",
+            "Load additional prompts as needed with get_prompt()"
+        ]
+    }
+    
+    return {
+        "status": "🦛 Session bootstrapped successfully!",
+        "loaded_prompts": loaded_prompts,
+        "tokens_loaded": result["tokens"],
+        "capabilities_enabled": capabilities,
+        "quick_reference": quick_reference,
+        "tip": "💡 Your session now includes proven methodologies. Use them to approach tasks systematically!"
+    }

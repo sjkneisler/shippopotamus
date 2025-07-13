@@ -14,7 +14,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 # Import our tools
 from prompt_registry import get_prompt, save_prompt, load_prompts
-from prompt_composer import compose_prompts, list_available, estimate_context
+from prompt_composer import compose_prompts, list_available, estimate_context, bootstrap_session
 
 # Map tool names to functions
 TOOL_MAP = {
@@ -23,7 +23,8 @@ TOOL_MAP = {
     'load_prompts': load_prompts,
     'compose_prompts': compose_prompts,
     'list_available': list_available,
-    'estimate_context': estimate_context
+    'estimate_context': estimate_context,
+    'bootstrap_session': bootstrap_session
 }
 
 def main():

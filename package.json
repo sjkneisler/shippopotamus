@@ -44,6 +44,7 @@
     "type": "server",
     "runtime": "node",
     "tools": [
+      "bootstrap_session",
       "get_prompt",
       "save_prompt",
       "load_prompts",
