@@ -8,6 +8,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Key Development Principles
 
+### Principles vs Workflows
+- **Principles**: Define HOW to work (axioms, patterns, methodologies)
+- **Workflows**: Define WHAT to do (specific task prompts)
+- Bootstrap loads principles; workflows are loaded on-demand for tasks
+
 ### Ask → Plan → Act Methodology
 Always clarify requirements before implementing. When working on this codebase:
 1. Understand the existing prompt structure
@@ -48,7 +53,13 @@ Our MCP tools use FastMCP for registration. Each tool provides:
 ### Directory Structure
 - `prompts/` - Prompt management system
   - `00_INDEX.md` - Always-loaded index (must stay ≤2KB)
-  - `axioms/` - Core principles (CORE.md, QUALITY.md, PATTERNS.md)
+  - `principles/` - How to work (methodologies and patterns)
+    - `axioms/` - Core principles (CORE.md, QUALITY.md, PATTERNS.md)
+    - `patterns/` - Best practices (safe_coding.md, documentation.md, etc.)
+  - `workflows/` - What to do (task-oriented prompts)
+    - `documentation/` - Documentation workflows
+    - `testing/` - Testing workflows
+    - `refactoring/` - Refactoring workflows
   - `meta/` - Design docs and backlog
 - `tools/` - MCP tool implementations
   - `prompt_registry.py` - Core registry for default and custom prompts

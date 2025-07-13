@@ -18,11 +18,16 @@ Example reply prefix: `🗺️🧭⚖️`.
 ### Prompt Management Tools
 | Function | Description |
 |----------|-------------|
+| `bootstrap_session()` | 🚀 Load core principles |
 | `get_prompt(name)` | Load from registry or library |
 | `save_prompt(...)` | Save custom prompts |
 | `load_prompts([...])` | Batch load multiple sources |
 | `compose_prompts(...)` | Combine with deduplication |
 | `list_available()` | Discover all prompts |
 | `estimate_context(...)` | Plan token usage |
+
+### Two Prompt Types
+- **Principles** (`principles/`): HOW to work - axioms, patterns
+- **Workflows** (`workflows/`): WHAT to do - task prompts
 
 (*File size target ≤ 2 KB—keep brief!*)

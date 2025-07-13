@@ -1,4 +1,4 @@
-<!-- id:safe_coding emoji:🛡️ -->
+<!-- id:safe_coding emoji:🛡️ type:principle -->
 
 # Safe Coding Practices
 

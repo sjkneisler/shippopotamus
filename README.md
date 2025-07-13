@@ -32,16 +32,25 @@ Shippopotamus is a prompt management platform that helps teams building AI appli
 }
 ```
 
-2. Use the tools in your AI workflow:
+2. Bootstrap your session with principles:
 ```python
-# Load a proven methodology
+# Initialize with core principles (recommended first call!)
+bootstrap_session()
+
+# Or load specific principles
 prompt = get_prompt("ask_plan_act")
+```
 
-# Save your company standards
-save_prompt("company_style", content="...", tags=["standards"])
+3. Use workflows for specific tasks:
+```python
+# Load a workflow to update documentation
+workflow = get_prompt("update_docs")
 
-# Compose multiple prompts
-composed = compose_prompts(["ask_plan_act", "company_style"])
+# Save your own workflows
+save_prompt("deploy_process", content="...", tags=["workflow", "deployment"])
+
+# Compose principles with workflows
+composed = compose_prompts(["quality_axioms", "update_docs"])
 ```
 
 ### For Contributors
@@ -67,15 +76,43 @@ composed = compose_prompts(["ask_plan_act", "company_style"])
 
 ## Prompt Library
 
-### Methodologies
+Shippopotamus provides two types of prompts:
+
+### 🧭 Principles - "How to Work"
+Working conditions, methodologies, and best practices that guide AI agents:
+
+**Axioms**
 - **ask_plan_act** (🧭) - Core Ask→Plan→Act methodology
 - **quality_axioms** (⚖️) - Quality and best practices
 - **patterns** (🪢) - Meta-patterns for prompt design
 
-### Patterns
+**Patterns**
 - **safe_coding** (🛡️) - Security practices
 - **context_economy** (💰) - Token optimization  
-- **echo_emoji** (📣) - Visual contracts
+- **documentation** (📝) - Documentation best practices
+- **debugging_methodology** (🐛) - Systematic debugging approach
+
+### 🎯 Workflows - "What to Do"
+Task-oriented prompts that guide specific actions:
+
+**Documentation**
+- **update_docs** (📚) - Update documentation after completing work
+
+More workflows coming soon: testing, refactoring, feature implementation, etc.
+
+### When to Use Each Type
+
+**Use Principles when:**
+- Setting up a new AI agent or session
+- Establishing coding standards and practices  
+- Training team members on methodologies
+- Defining "ground rules" for AI behavior
+
+**Use Workflows when:**
+- Performing specific tasks (update docs, write tests, etc.)
+- Following repeatable processes
+- Implementing features with consistent steps
+- Automating routine development activities
 
 ---
 

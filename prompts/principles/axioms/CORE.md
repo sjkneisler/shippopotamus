@@ -1,5 +1,5 @@
-# prompts/axioms/CORE.md
-<!-- id:core emoji:🧭 -->
+# prompts/principles/axioms/CORE.md
+<!-- id:core emoji:🧭 type:principle -->
 
 | # | Axiom | Why |
 |---|-------|-----|

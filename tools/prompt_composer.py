@@ -118,28 +118,39 @@ def list_available(
     # Default prompts with categories
     if include_defaults:
         result["defaults"] = {
-            "methodologies": [
-                {"name": "ask_plan_act", "description": "Core Ask→Plan→Act methodology"},
-                {"name": "quality_axioms", "description": "Quality and best practices"},
-                {"name": "patterns", "description": "Meta-patterns for prompt design"}
-            ],
-            "patterns": [
-                {"name": "safe_coding", "description": "Safe coding practices"},
-                {"name": "context_economy", "description": "Context-aware prompt loading"},
-                {"name": "echo_emoji", "description": "Echo-emoji contract pattern"},
-                {"name": "debugging_methodology", "description": "Systematic debugging approach"},
-                {"name": "code_review", "description": "Comprehensive code review checklist"},
-                {"name": "documentation", "description": "Documentation best practices"},
-                {"name": "testing_strategy", "description": "Test-driven development guide"}
-            ],
+            "principles": {
+                "axioms": [
+                    {"name": "ask_plan_act", "description": "Core Ask→Plan→Act methodology", "path": "principles/axioms/CORE.md"},
+                    {"name": "quality_axioms", "description": "Quality and best practices", "path": "principles/axioms/QUALITY.md"},
+                    {"name": "patterns", "description": "Meta-patterns for prompt design", "path": "principles/axioms/PATTERNS.md"}
+                ],
+                "patterns": [
+                    {"name": "safe_coding", "description": "Safe coding practices", "path": "principles/patterns/safe_coding.md"},
+                    {"name": "context_economy", "description": "Context-aware prompt loading", "path": "principles/patterns/context_economy.md"},
+                    {"name": "echo_emoji", "description": "Echo-emoji contract pattern", "path": "principles/patterns/echo_emoji.md"},
+                    {"name": "debugging_methodology", "description": "Systematic debugging approach", "path": "principles/patterns/debugging_methodology.md"},
+                    {"name": "code_review", "description": "Comprehensive code review checklist", "path": "principles/patterns/code_review.md"},
+                    {"name": "documentation", "description": "Documentation best practices", "path": "principles/patterns/documentation.md"},
+                    {"name": "testing_strategy", "description": "Test-driven development guide", "path": "principles/patterns/testing_strategy.md"}
+                ]
+            },
+            "workflows": {
+                "documentation": [
+                    {"name": "update_docs", "description": "Update documentation after completing work", "path": "workflows/documentation/update_docs.md"}
+                ]
+            },
             "meta": [
                 {"name": "implementation_guide", "description": "Implementation planning"},
                 {"name": "design_rationale", "description": "Design decisions and rationale"}
             ]
         }
         # Count defaults
-        for category in result["defaults"].values():
-            result["total"] += len(category)
+        for category, content in result["defaults"].items():
+            if isinstance(content, dict):  # principles and workflows
+                for subcategory in content.values():
+                    result["total"] += len(subcategory)
+            else:  # meta
+                result["total"] += len(content)
     
     # Custom prompts
     if include_custom:

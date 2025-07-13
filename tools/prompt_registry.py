@@ -69,19 +69,22 @@ def get_default_prompt(name: str) -> Optional[Dict]:
     """Load a default prompt from our curated library."""
     # Map of default prompt names to their file paths
     default_prompts = {
-        # Core methodologies
-        "ask_plan_act": "prompts/axioms/CORE.md",
-        "quality_axioms": "prompts/axioms/QUALITY.md", 
-        "patterns": "prompts/axioms/PATTERNS.md",
+        # Core methodologies (principles)
+        "ask_plan_act": "prompts/principles/axioms/CORE.md",
+        "quality_axioms": "prompts/principles/axioms/QUALITY.md", 
+        "patterns": "prompts/principles/axioms/PATTERNS.md",
         
-        # Specific patterns
-        "safe_coding": "prompts/patterns/safe_coding.md",
-        "context_economy": "prompts/patterns/context_economy.md",
-        "echo_emoji": "prompts/patterns/echo_emoji.md",
-        "debugging_methodology": "prompts/patterns/debugging_methodology.md",
-        "code_review": "prompts/patterns/code_review.md",
-        "documentation": "prompts/patterns/documentation.md",
-        "testing_strategy": "prompts/patterns/testing_strategy.md",
+        # Specific patterns (principles)
+        "safe_coding": "prompts/principles/patterns/safe_coding.md",
+        "context_economy": "prompts/principles/patterns/context_economy.md",
+        "echo_emoji": "prompts/principles/patterns/echo_emoji.md",
+        "debugging_methodology": "prompts/principles/patterns/debugging_methodology.md",
+        "code_review": "prompts/principles/patterns/code_review.md",
+        "documentation": "prompts/principles/patterns/documentation.md",
+        "testing_strategy": "prompts/principles/patterns/testing_strategy.md",
+        
+        # Workflows
+        "update_docs": "prompts/workflows/documentation/update_docs.md",
         
         # Meta prompts
         "implementation_guide": "prompts/meta/implementation-plan.md",
