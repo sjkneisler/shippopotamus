@@ -74,6 +74,7 @@ Our MCP tools use FastMCP for registration. Each tool provides:
 2. **Dual Registry**: Support both our curated prompts and user's custom prompts
 3. **File References**: Allow users to reference files in their own repositories
 4. **Context Awareness**: Help users manage token budgets effectively
+5. **Zero Friction**: Never force users to call extra tools - systems should auto-initialize
 
 ## Testing Approach
 

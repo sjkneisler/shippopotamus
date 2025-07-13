@@ -16,6 +16,13 @@ sys.path.insert(0, str(Path(__file__).parent))
 from prompt_registry import get_prompt, save_prompt, load_prompts
 from prompt_composer import compose_prompts, list_available, estimate_context, bootstrap_session
 
+# Try to import embeddings tools - they're optional
+try:
+    from embeddings_manager import search_prompts, discover_prompts, compose_smart
+    HAS_EMBEDDINGS = True
+except ImportError:
+    HAS_EMBEDDINGS = False
+
 # Map tool names to functions
 TOOL_MAP = {
     'get_prompt': get_prompt,
@@ -26,6 +33,14 @@ TOOL_MAP = {
     'estimate_context': estimate_context,
     'bootstrap_session': bootstrap_session
 }
+
+# Add embeddings tools if available
+if HAS_EMBEDDINGS:
+    TOOL_MAP.update({
+        'search_prompts': search_prompts,
+        'discover_prompts': discover_prompts,
+        'compose_smart': compose_smart
+    })
 
 def main():
     if len(sys.argv) < 3:

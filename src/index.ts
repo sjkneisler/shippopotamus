@@ -103,6 +103,44 @@ const TOOLS: Tool[] = [
         prompt_refs: { type: 'array', items: { type: 'string' }, description: 'Prompt references to estimate' }
       }
     }
+  },
+  {
+    name: 'search_prompts',
+    description: 'Search for prompts using semantic similarity based on your query',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        query: { type: 'string', description: 'Natural language description of what you want to do' },
+        top_k: { type: 'number', description: 'Number of results to return', default: 5 },
+        min_similarity: { type: 'number', description: 'Minimum similarity threshold (0-1)', default: 0.3 }
+      },
+      required: ['query']
+    }
+  },
+  {
+    name: 'discover_prompts',
+    description: 'Discover relevant prompts for a specific task - analyzes your task and recommends both principles (HOW to work) and workflows (WHAT to do)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        task_description: { type: 'string', description: 'Description of the task you want to accomplish' }
+      },
+      required: ['task_description']
+    }
+  },
+  {
+    name: 'compose_smart',
+    description: 'Intelligently compose prompts based on task description - automatically discovers, selects, and combines the most relevant prompts',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        task_description: { type: 'string', description: 'What you want to accomplish' },
+        max_tokens: { type: 'number', description: 'Maximum token budget' },
+        include_principles: { type: 'boolean', description: 'Include guiding principles', default: true },
+        include_workflows: { type: 'boolean', description: 'Include task workflows', default: true }
+      },
+      required: ['task_description']
+    }
   }
 ];
 
