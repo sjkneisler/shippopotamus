@@ -1,0 +1,219 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  test-python:
+    name: Python Tests
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python-version: ['3.8', '3.9', '3.10', '3.11']
+        exclude:
+          # Skip some combinations to save CI time
+          - os: windows-latest
+            python-version: '3.8'
+          - os: windows-latest
+            python-version: '3.9'
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest-cov
+    
+    - name: Run unit tests
+      run: |
+        pytest -v --cov=tools --cov-report=xml --cov-report=term -m "not slow and not requires_model"
+    
+    - name: Run integration tests
+      run: |
+        pytest -v -m "integration and not requires_model"
+    
+    - name: Upload coverage to Codecov
+      if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.10'
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        fail_ci_if_error: true
+
+  test-embeddings:
+    name: Embeddings Tests
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+    
+    - name: Install all dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest-cov
+    
+    - name: Run embeddings tests
+      run: |
+        pytest -v -m "embeddings" --cov=tools/embeddings_manager --cov-report=term
+    
+    - name: Test embeddings functionality
+      run: |
+        python -c "from tools.embeddings_manager import EmbeddingsManager; print('Embeddings import successful')"
+
+  test-typescript:
+    name: TypeScript Build
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Build TypeScript
+      run: npm run build
+    
+    - name: Check dist files exist
+      run: |
+        test -f dist/index.js
+        test -f dist/cli.js
+        test -f dist/bootstrap.js
+
+  test-mcp-integration:
+    name: MCP Integration Test
+    runs-on: ubuntu-latest
+    needs: [test-python, test-typescript]
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        npm ci
+        npm run build
+    
+    - name: Test MCP bridge
+      run: |
+        # Test help output
+        python tools/mcp_bridge.py 2>&1 | grep -q "Usage"
+        
+        # Test tool listing
+        python tools/mcp_bridge.py list_available '{}' | grep -q "defaults"
+    
+    - name: Test tool execution
+      run: |
+        # Create a test script to verify tools work
+        cat > test_integration.py << 'EOF'
+        import subprocess
+        import json
+        import sys
+        
+        # Test bootstrap_session
+        result = subprocess.run([
+            sys.executable, "tools/mcp_bridge.py", 
+            "bootstrap_session", "{}"
+        ], capture_output=True, text=True)
+        
+        data = json.loads(result.stdout)
+        assert "status" in data
+        assert "🦛" in data["status"]
+        print("✅ bootstrap_session works")
+        
+        # Test list_available
+        result = subprocess.run([
+            sys.executable, "tools/mcp_bridge.py",
+            "list_available", '{"include_defaults": true}'
+        ], capture_output=True, text=True)
+        
+        data = json.loads(result.stdout)
+        assert "defaults" in data
+        print("✅ list_available works")
+        
+        print("All integration tests passed!")
+        EOF
+        
+        python test_integration.py
+
+  lint:
+    name: Code Quality
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install ruff black
+    
+    - name: Run ruff
+      run: ruff check tools/
+    
+    - name: Check formatting with black
+      run: black --check tools/
+
+  publish-check:
+    name: NPM Publish Check
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        registry-url: 'https://registry.npmjs.org'
+    
+    - name: Install and build
+      run: |
+        npm ci
+        npm run build
+    
+    - name: Check package
+      run: |
+        npm pack --dry-run
+        echo "Package would be published with:"
+        npm view . version || echo "Not yet published"
